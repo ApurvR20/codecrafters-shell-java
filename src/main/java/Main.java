@@ -29,6 +29,7 @@ public class Main {
         builtin.add("echo");
         builtin.add("exit");
         builtin.add("type");
+        builtin.add("pwd");
         while (true) {
             System.out.print("$ ");
             input = sc.nextLine();
@@ -48,6 +49,8 @@ public class Main {
             } else if(input.startsWith("echo")){
                 idx = input.indexOf(' ');
                 System.out.println(input.substring(idx+1));
+            } else if (input.startsWith("pwd")) {
+                System.out.println(System.getProperty("user.dir"));
             } else if(input.equals("exit")){
                 break;
             } else {
