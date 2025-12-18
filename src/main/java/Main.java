@@ -16,7 +16,7 @@ public class Main {
         path = System.getenv("PATH");
         String[] dirs = path.split(":");
         List<Path> envPaths = new ArrayList<>();
-        Path pathObj, filePath;
+        Path pathObj, filePath, dirPath;
         for(i = 0; i < dirs.length; i++){
             pathObj = Paths.get(dirs[i]);
             if(Files.exists(pathObj)){
@@ -30,6 +30,7 @@ public class Main {
         builtin.add("exit");
         builtin.add("type");
         builtin.add("pwd");
+        builtin.add("cd");
         while (true) {
             System.out.print("$ ");
             input = sc.nextLine();
@@ -51,7 +52,19 @@ public class Main {
                 System.out.println(input.substring(idx+1));
             } else if (input.startsWith("pwd")) {
                 System.out.println(System.getProperty("user.dir"));
-            } else if(input.equals("exit")){
+            } else if(input.startsWith("cd")){
+                idx = input.indexOf(' ');
+                path = input.substring(idx+1);
+                dirPath = Paths.get(path);
+                if(Files.exists(dirPath)){
+                    //absolute paths
+                    System.setProperty("user.dir", path);
+                } else {
+                    System.out.println("cd: "+dirPath+": No such file or directory");
+                }
+
+            }
+            else if(input.equals("exit")){
                 break;
             } else {
                 arguments = input.split(" ");
