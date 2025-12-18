@@ -6,17 +6,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
-/*
-- extract path
-- split path into all folders
-- extract all folders
-- recursively search in all folders
-- if found, display the path
-*/
+
 public class Main {
     public static void main(String[] args) throws Exception {
         Scanner sc = new Scanner(System.in);
         String input = "", command, path;
+        String[] arguments;
         int i;
         path = System.getenv("PATH");
         String[] dirs = path.split(":");
@@ -30,7 +25,6 @@ public class Main {
         }
 
         int idx;
-        boolean exeFound;
         Set<String> builtin = new HashSet<>();
         builtin.add("echo");
         builtin.add("exit");
@@ -39,25 +33,16 @@ public class Main {
             System.out.print("$ ");
             input = sc.nextLine();
             if(input.startsWith("type")){
-
-                exeFound = false;
                 idx = input.indexOf(' ') ;
                 command = input.substring(idx+1);
-
                 if(builtin.contains(command)){
                     System.out.println(command +" is a shell builtin");
                 } else {
-                    for(Path p : envPaths){
-                        filePath = p.resolve(command);
-                        if(Files.exists(filePath) && Files.isExecutable(filePath)){
-                            exeFound = true;
-                            System.out.println(command + " is "+filePath);
-                            break;
-                        }
-                    }
-
-                    if(!exeFound){
+                    filePath = findExec(envPaths, command);
+                    if(filePath == null){
                         System.out.println(command+": not found");
+                    } else {
+                        System.out.println(command+" is "+filePath);
                     }
                 }
             } else if(input.startsWith("echo")){
@@ -66,10 +51,40 @@ public class Main {
             } else if(input.equals("exit")){
                 break;
             } else {
-                System.out.println(input+": command not found");
+                arguments = input.split(" ");
+                filePath = findExec(envPaths, arguments[0]);
+                if(filePath == null){
+                    System.out.println(input+": command not found");
+                } else {
+                    runExe(arguments);
+                }
             }
         }
 
         sc.close();
+    }
+
+    // function to find executable by file name. Returns null if executable version of the file doesn't exist.
+    public static Path findExec(List<Path> envPaths, String fileName){
+        Path filePath = null;
+        for(Path p : envPaths){
+            filePath = p.resolve(fileName);
+            if(Files.exists(filePath) && Files.isExecutable(filePath)){
+                return filePath;
+            }
+        }
+
+        return null;
+    }
+
+    public static void runExe(String[] arguments)
+    {
+        try {
+            //ProcessBuilder runs in a different process, and is non-blocking. JVM main process doesn't wait for it and keeps. Hence we have to "wait for" this child process to end.
+            Process p = new ProcessBuilder(arguments).inheritIO().start();
+            p.waitFor();
+        } catch (Exception e) {
+            System.out.println(e);
+        }
     }
 }
