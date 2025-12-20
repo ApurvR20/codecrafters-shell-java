@@ -10,13 +10,13 @@ import java.util.Set;
 public class Main {
     public static void main(String[] args) throws Exception {
         Scanner sc = new Scanner(System.in);
-        String input = "", command, path;
+        String input = "", command, allPath, newPath;
         String[] arguments;
         int i;
-        path = System.getenv("PATH");
-        String[] dirs = path.split(":");
+        allPath = System.getenv("PATH");
+        String[] dirs = allPath.split(":");
         List<Path> envPaths = new ArrayList<>();
-        Path pathObj, filePath, dirPath;
+        Path pathObj, filePath, dirPath = null,currPath, tempPath;
         for(i = 0; i < dirs.length; i++){
             pathObj = Paths.get(dirs[i]);
             if(Files.exists(pathObj)){
@@ -51,18 +51,25 @@ public class Main {
                 idx = input.indexOf(' ');
                 System.out.println(input.substring(idx+1));
             } else if (input.startsWith("pwd")) {
-                System.out.println(System.getProperty("user.dir"));
+                System.out.println(System.getProperty("user.dir").toString());
             } else if(input.startsWith("cd")){
+                currPath = Paths.get(System.getProperty("user.dir"));
                 idx = input.indexOf(' ');
-                path = input.substring(idx+1);
-                dirPath = Paths.get(path);
-                if(Files.exists(dirPath)){
-                    //absolute paths
-                    System.setProperty("user.dir", path);
+                newPath = input.substring(idx+1);
+                if(newPath.charAt(0) == '.'){
+                    tempPath = currPath.resolve(newPath);
                 } else {
-                    System.out.println("cd: "+dirPath+": No such file or directory");
+                    tempPath = Paths.get(newPath);
                 }
 
+                try {
+                    dirPath = tempPath.toRealPath();
+                } catch (Exception e) {
+                    
+                    System.out.println("cd: "+tempPath.toString()+": No such file or directory");
+                }
+
+                System.setProperty("user.dir",dirPath.toString());
             }
             else if(input.equals("exit")){
                 break;
