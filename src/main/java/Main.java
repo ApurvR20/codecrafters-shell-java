@@ -10,10 +10,11 @@ import java.util.Set;
 public class Main {
     public static void main(String[] args) throws Exception {
         Scanner sc = new Scanner(System.in);
-        String input = "", command, allPath, newPath;
+        String input = "", command, allPath, newPath, homePath;
         String[] arguments;
         int i;
         allPath = System.getenv("PATH");
+        homePath = System.getenv("HOME");
         String[] dirs = allPath.split(":");
         List<Path> envPaths = new ArrayList<>();
         Path pathObj, filePath, dirPath = null,currPath, tempPath;
@@ -56,8 +57,11 @@ public class Main {
                 currPath = Paths.get(System.getProperty("user.dir"));
                 idx = input.indexOf(' ');
                 newPath = input.substring(idx+1);
+
                 if(newPath.charAt(0) == '.'){
                     tempPath = currPath.resolve(newPath);
+                } else if(newPath.charAt(0) == '~'){
+                    tempPath = Paths.get(homePath);
                 } else {
                     tempPath = Paths.get(newPath);
                 }
