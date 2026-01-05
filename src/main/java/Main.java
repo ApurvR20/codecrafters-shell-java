@@ -13,13 +13,12 @@ public class Main {
         Scanner sc = new Scanner(System.in);
         String input = "", command, allPath, newPath, homePath;
         String[] arguments;
-        int i;
         allPath = System.getenv("PATH");
         homePath = System.getenv("HOME");
         String[] dirs = allPath.split(":");
         List<Path> envPaths = new ArrayList<>();
         Path pathObj, filePath, dirPath = null,currPath, tempPath;
-        for(i = 0; i < dirs.length; i++){
+        for(int i = 0; i < dirs.length; i++){
             pathObj = Paths.get(dirs[i]);
             if(Files.exists(pathObj)){
                 envPaths.add(pathObj);
@@ -50,20 +49,25 @@ public class Main {
                         System.out.println(command+" is "+filePath);
                     }
                 }
-            } else if(input.startsWith("echo")){
-//                idx = input.indexOf(' ');
-//                arguments = someParser(input.substring(idx+1));
-//                System.out.println(arguments);
+            }
+            else if(input.startsWith("echo")){
 
-                for(int j = 1; j < arguments.length; j++){
-                    System.out.print(arguments[i]);
+                for (int j = 1; j < arguments.length; j++) {
+                    String arg = arguments[j];
+                    if ((arg.startsWith("'") && arg.endsWith("'")) ||
+                            (arg.startsWith("\"") && arg.endsWith("\""))) {
+                        System.out.print(arg.substring(1, arg.length() - 1) + " ");
+                    } else {
+                        System.out.print(arg + " ");
+                    }
                 }
-                System.out.println();
 
-//                System.out.println(i);
-            } else if (input.startsWith("pwd")) {
+                System.out.println();
+            }
+            else if (input.startsWith("pwd")) {
                 System.out.println(System.getProperty("user.dir").toString());
-            } else if(input.startsWith("cd")){
+            }
+            else if(input.startsWith("cd")){
                 currPath = Paths.get(System.getProperty("user.dir"));
                 idx = input.indexOf(' ');
                 newPath = input.substring(idx+1);
@@ -84,11 +88,11 @@ public class Main {
                 }
 
                 System.setProperty("user.dir",dirPath.toString());
-            } else if(input.equals("exit")){
+            }
+            else if(input.equals("exit")){
                 break;
-            } else {
-                arguments = input.split(" ");
-                System.out.println(arguments.toString());
+            }
+            else {
                 filePath = findExec(envPaths, arguments[0]);
                 if(filePath == null){
                     System.out.println(input+": command not found");
@@ -106,6 +110,7 @@ public class Main {
         Path filePath = null;
         for(Path p : envPaths){
             filePath = p.resolve(fileName);
+            System.out.println(filePath);
             if(Files.exists(filePath) && Files.isExecutable(filePath)){
                 return filePath;
             }
@@ -126,95 +131,15 @@ public class Main {
         }
     }
 
-
-    public static String singleQuoteParser(String input){
-
-        boolean quoteStatus = false;
-        StringBuilder sb = new StringBuilder();
-        StringBuilder tempSt = new StringBuilder();
-        char prev = input.charAt(0);
-        if(prev == '\''){
-            quoteStatus = true;
-        } else {
-            sb.append(prev);
-
-        }
-
-        char ch;
-        for(int i = 1; i < input.length(); i++){
-
-            ch = input.charAt(i);
-            if(quoteStatus){
-                if(ch == '\''){
-                    quoteStatus = false;
-                    sb.append(tempSt);
-                    tempSt.setLength(0);;
-                } else {
-                    tempSt.append(ch);
-                }
-            } else if(ch == '\''){
-                quoteStatus = true;
-            } else if(Character.isWhitespace(prev) && Character.isWhitespace(ch)){
-            }
-            else {
-                sb.append(ch);
-            }
-
-            prev = ch;
-        }
-
-        sb.append(tempSt);
-        return sb.toString();
-    }
-
-    public static String[] someParser(String input){
-
-        List<String> inputList = new ArrayList<>();
-        StringBuilder sb = new StringBuilder();
-        char ch, open ='\0';
-        int l = input.length();
-        for(int i = 0; i < l; i++){
-            ch = input.charAt(i);
-
-            if(open == '\0' && ch == ' ' && !sb.isEmpty() && sb.charAt(sb.length()-1) == ' '){
-                continue;
-            }
-            sb.append(ch);
-
-            if(ch == '\'' || ch == '\"'){
-                if(open == '\0'){
-                    open = ch;
-                } else if(open == ch){
-
-                    //handling same consecutive quotes
-                    if(i < l-1 && input.charAt(i+1) == ch){
-                        sb.deleteCharAt(sb.length()-1);
-                        i++;
-                        continue;
-                    }
-
-                    open = '\0';
-                    inputList.add(sb.toString());
-                    sb.setLength(0);
-                }
-            }
-        }
-
-
-
-        return inputList.toArray(new String[0]);
-    }
-
     public static List<String> splitter(String input){
         List<String> arguments = new ArrayList<>();
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         char open = '\0',ch;
         int l = input.length();
+
         for(int i = 0; i < l;i++){
             ch = input.charAt(i);
-            if(Character.isAlphabetic(ch) || Character.isWhitespace(ch)){
-                sb.append(ch);
-            } else if(ch == '\"' || ch == '\'') {
+            if(ch == '\"' || ch == '\'') {
 
                 if(open == '\0'){
                     //this line handles consec same quotes while opening
@@ -223,6 +148,7 @@ public class Main {
                     } else {
                         arguments.add(sb.toString());
                         sb.setLength(0);
+                        sb.append(ch);
                         open = ch;
                     }
                 } else if(open == ch){
@@ -230,6 +156,7 @@ public class Main {
                     if(i < l-1 && ch == input.charAt(i+1)){
                         i++;
                     } else {
+                        sb.append(ch);
                         arguments.add(sb.toString());
                         sb.setLength(0);
                         open = '\0';
@@ -238,7 +165,18 @@ public class Main {
                     sb.append(ch);
                 }
             }
+            else if (open == '\0' && Character.isWhitespace(ch) && !sb.isEmpty()) {
+                arguments.add(sb.toString());
+                sb.setLength(0);
+            } else {
+                sb.append(ch);
+            }
+        }
 
+//        System.out.println("sb = "+sb);
+
+        if(!sb.isEmpty()){
+            arguments.add(sb.toString());
         }
 
         return arguments;
@@ -250,12 +188,12 @@ public class Main {
         for(int i = 0; i < arguments.size(); i++){
             s = arguments.get(i);
             if(s.isBlank()){
-                arguments.set(i, " ");
+                arguments.remove(i);
+                i--;
             } else {
                 arguments.set(i, s.trim());
             }
         }
-
         return arguments;
     }
 
