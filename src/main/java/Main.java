@@ -36,6 +36,7 @@ public class Main {
         while (true) {
             System.out.print("$ ");
             input = sc.nextLine();
+            arguments = parser(input);
             if(input.startsWith("type")){
                 idx = input.indexOf(' ') ;
                 command = input.substring(idx+1);
@@ -50,14 +51,16 @@ public class Main {
                     }
                 }
             } else if(input.startsWith("echo")){
-                idx = input.indexOf(' ');
-                arguments = someParser(input.substring(idx+1));
-                System.out.println(arguments);
-                for(String s : arguments){
-                    System.out.print(s);
-                }
+//                idx = input.indexOf(' ');
+//                arguments = someParser(input.substring(idx+1));
+//                System.out.println(arguments);
 
-                System.out.println(i);
+                for(int j = 1; j < arguments.length; j++){
+                    System.out.print(arguments[i]);
+                }
+                System.out.println();
+
+//                System.out.println(i);
             } else if (input.startsWith("pwd")) {
                 System.out.println(System.getProperty("user.dir").toString());
             } else if(input.startsWith("cd")){
@@ -200,5 +203,64 @@ public class Main {
 
 
         return inputList.toArray(new String[0]);
+    }
+
+    public static List<String> splitter(String input){
+        List<String> arguments = new ArrayList<>();
+        StringBuffer sb = new StringBuffer();
+        char open = '\0',ch;
+        int l = input.length();
+        for(int i = 0; i < l;i++){
+            ch = input.charAt(i);
+            if(Character.isAlphabetic(ch) || Character.isWhitespace(ch)){
+                sb.append(ch);
+            } else if(ch == '\"' || ch == '\'') {
+
+                if(open == '\0'){
+                    //this line handles consec same quotes while opening
+                    if(i < l-1 && ch == input.charAt(i+1)){
+                        i++;
+                    } else {
+                        arguments.add(sb.toString());
+                        sb.setLength(0);
+                        open = ch;
+                    }
+                } else if(open == ch){
+                    //this line handles consec same quotes while closing
+                    if(i < l-1 && ch == input.charAt(i+1)){
+                        i++;
+                    } else {
+                        arguments.add(sb.toString());
+                        sb.setLength(0);
+                        open = '\0';
+                    }
+                } else {
+                    sb.append(ch);
+                }
+            }
+
+        }
+
+        return arguments;
+    }
+
+    public static List<String> spaceHandler(List<String> arguments){
+
+        String s;
+        for(int i = 0; i < arguments.size(); i++){
+            s = arguments.get(i);
+            if(s.isBlank()){
+                arguments.set(i, " ");
+            } else {
+                arguments.set(i, s.trim());
+            }
+        }
+
+        return arguments;
+    }
+
+    public static String[] parser(String input){
+
+        return spaceHandler(splitter(input)).toArray(new String[0]);
     }
 }
