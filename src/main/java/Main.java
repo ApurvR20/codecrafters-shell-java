@@ -1,4 +1,3 @@
-//probably need to escape the spaces
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -9,18 +8,18 @@ import java.util.Scanner;
 import java.util.Set;
 
 public class Main {
-    public static void main(String[] args) throws Exception {
+    static void main() {
         Scanner sc = new Scanner(System.in);
-        String input = "", command, allPath, newPath, homePath;
+        String input, command, allPath, newPath, homePath;
         String[] arguments;
         allPath = System.getenv("PATH");
         homePath = System.getenv("HOME");
         String[] dirs = allPath.split(":");
         List<Path> envPaths = new ArrayList<>();
         Path pathObj, filePath, dirPath = null,currPath, tempPath;
-        for(int i = 0; i < dirs.length; i++){
-            pathObj = Paths.get(dirs[i]);
-            if(Files.exists(pathObj)){
+        for (String dir : dirs) {
+            pathObj = Paths.get(dir);
+            if (Files.exists(pathObj)) {
                 envPaths.add(pathObj);
             }
         }
@@ -54,18 +53,13 @@ public class Main {
 
                 for (int j = 1; j < arguments.length; j++) {
                     String arg = arguments[j];
-                    if ((arg.startsWith("'") && arg.endsWith("'")) ||
-                            (arg.startsWith("\"") && arg.endsWith("\""))) {
-                        System.out.print(arg.substring(1, arg.length() - 1) + " ");
-                    } else {
-                        System.out.print(arg + " ");
-                    }
+                    System.out.print(arg + " ");
                 }
 
                 System.out.println();
             }
             else if (input.startsWith("pwd")) {
-                System.out.println(System.getProperty("user.dir").toString());
+                System.out.println(System.getProperty("user.dir"));
             }
             else if(input.startsWith("cd")){
                 currPath = Paths.get(System.getProperty("user.dir"));
@@ -84,10 +78,12 @@ public class Main {
                     dirPath = tempPath.toRealPath();
                 } catch (Exception e) {
 
-                    System.out.println("cd: "+tempPath.toString()+": No such file or directory");
+                    System.out.println("cd: "+tempPath+": No such file or directory");
                 }
 
-                System.setProperty("user.dir",dirPath.toString());
+                if (dirPath != null) {
+                    System.setProperty("user.dir",dirPath.toString());
+                }
             }
             else if(input.equals("exit")){
                 break;
@@ -107,10 +103,9 @@ public class Main {
 
     // function to find executable by file name. Returns null if executable version of the file doesn't exist.
     public static Path findExec(List<Path> envPaths, String fileName){
-        Path filePath = null;
+        Path filePath;
         for(Path p : envPaths){
             filePath = p.resolve(fileName);
-            System.out.println(filePath);
             if(Files.exists(filePath) && Files.isExecutable(filePath)){
                 return filePath;
             }
@@ -119,14 +114,13 @@ public class Main {
         return null;
     }
 
-    public static void runExe(String[] arguments)
-    {
+    public static void runExe(String[] arguments) {
         try {
-            //ProcessBuilder runs in a different process, and is non-blocking. JVM main process doesn't wait for it and keeps. Hence we have to "wait for" this child process to end.
+            //ProcessBuilder runs in a different process, and is non-blocking. JVM main process doesn't wait for it and keeps. Hence, we have to "wait for" this child process to end.
             Process p = new ProcessBuilder(arguments).inheritIO().start();
             p.waitFor();
         } catch (Exception e ) {
-            System.out.println(e);
+            e.printStackTrace();
 
         }
     }
@@ -142,21 +136,23 @@ public class Main {
             if(ch == '\"' || ch == '\'') {
 
                 if(open == '\0'){
-                    //this line handles consec same quotes while opening
+                    //this line handles consecutive same quotes while opening
                     if(i < l-1 && ch == input.charAt(i+1)){
                         i++;
-                    } else {
+                    }
+                    else {
                         arguments.add(sb.toString());
                         sb.setLength(0);
-                        sb.append(ch);
+//                        sb.append(ch);
                         open = ch;
                     }
                 } else if(open == ch){
-                    //this line handles consec same quotes while closing
+                    //this line handles consecutive same quotes while closing
                     if(i < l-1 && ch == input.charAt(i+1)){
                         i++;
-                    } else {
-                        sb.append(ch);
+                    }
+                    else {
+//                        sb.append(ch);
                         arguments.add(sb.toString());
                         sb.setLength(0);
                         open = '\0';
