@@ -143,7 +143,6 @@ public class Main {
                     else {
                         arguments.add(sb.toString());
                         sb.setLength(0);
-//                        sb.append(ch);
                         open = ch;
                     }
                 } else if(open == ch){
@@ -152,7 +151,6 @@ public class Main {
                         i++;
                     }
                     else {
-//                        sb.append(ch);
                         arguments.add(sb.toString());
                         sb.setLength(0);
                         open = '\0';
@@ -161,15 +159,21 @@ public class Main {
                     sb.append(ch);
                 }
             }
-            else if (open == '\0' && Character.isWhitespace(ch) && !sb.isEmpty()) {
-                arguments.add(sb.toString());
-                sb.setLength(0);
+            else if (open == '\0') {
+                if(Character.isWhitespace(ch) && !sb.isEmpty()) {
+                    arguments.add(sb.toString());
+                    sb.setLength(0);
+                }
+                else if(ch == '\\' && i < l-1){
+                    sb.append(input.charAt(i+1));
+                    i++;
+                } else {
+                    sb.append(ch);
+                }
             } else {
                 sb.append(ch);
             }
         }
-
-//        System.out.println("sb = "+sb);
 
         if(!sb.isEmpty()){
             arguments.add(sb.toString());
