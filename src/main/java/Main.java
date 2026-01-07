@@ -11,7 +11,7 @@ public class Main {
     static void main() {
         Scanner sc = new Scanner(System.in);
         String input, command, allPath, newPath, homePath;
-        String[] arguments;
+        List<String> arguments;
         allPath = System.getenv("PATH");
         homePath = System.getenv("HOME");
         String[] dirs = allPath.split(":");
@@ -24,7 +24,6 @@ public class Main {
             }
         }
 
-        int idx;
         Set<String> builtin = new HashSet<>();
         builtin.add("echo");
         builtin.add("exit");
@@ -34,10 +33,9 @@ public class Main {
         while (true) {
             System.out.print("$ ");
             input = sc.nextLine();
-            arguments = parser(input);
-            if(input.startsWith("type")){
-                idx = input.indexOf(' ') ;
-                command = input.substring(idx+1);
+            arguments = tokenizer(input);
+            if(arguments.getFirst().equals("type")){
+                command = arguments.get(2);
                 if(builtin.contains(command)){
                     System.out.println(command +" is a shell builtin");
                 } else {
@@ -49,22 +47,21 @@ public class Main {
                     }
                 }
             }
-            else if(input.startsWith("echo")){
+            else if(arguments.getFirst().equals("echo")){
 
-                for (int j = 1; j < arguments.length; j++) {
-                    String arg = arguments[j];
-                    System.out.print(arg + " ");
+                for (int j = 2; j < arguments.size(); j++) {
+                    String arg = arguments.get(j);
+                    System.out.print(arg);
                 }
 
                 System.out.println();
             }
-            else if (input.startsWith("pwd")) {
+            else if (arguments.getFirst().equals("pwd")) {
                 System.out.println(System.getProperty("user.dir"));
             }
-            else if(input.startsWith("cd")){
+            else if(arguments.getFirst().equals("cd")){
                 currPath = Paths.get(System.getProperty("user.dir"));
-                idx = input.indexOf(' ');
-                newPath = input.substring(idx+1);
+                newPath = arguments.get(2);
 
                 if(newPath.charAt(0) == '.'){
                     tempPath = currPath.resolve(newPath);
@@ -85,19 +82,19 @@ public class Main {
                     System.setProperty("user.dir",dirPath.toString());
                 }
             }
-            else if(input.equals("exit")){
+            else if(arguments.getFirst().equals("exit")){
                 break;
             }
             else {
-                filePath = findExec(envPaths, arguments[0]);
+                spaceRemover(arguments);
+                filePath = findExec(envPaths, arguments.getFirst());
                 if(filePath == null){
                     System.out.println(input+": command not found");
                 } else {
-                    runExe(arguments);
+                    runExe(arguments.toArray(new String[0]));
                 }
             }
         }
-
         sc.close();
     }
 
@@ -125,52 +122,81 @@ public class Main {
         }
     }
 
-    public static List<String> splitter(String input){
+    public static List<String> tokenizer(String input){
         List<String> arguments = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
-        char open = '\0',ch;
+        char open = '\0',ch, next_ch;
         int l = input.length();
 
         for(int i = 0; i < l;i++){
             ch = input.charAt(i);
-            if(ch == '\"' || ch == '\'') {
 
-                if(open == '\0'){
-                    //this line handles consecutive same quotes while opening
-                    if(i < l-1 && ch == input.charAt(i+1)){
-                        i++;
-                    }
-                    else {
+            //open can be only 3 values, null, ' (single quote), " (double quote)
+            if(open == ch){ //quotes
+                if(i < l-1 && ch == input.charAt(i+1)){
+                    i++;
+                } else {
+                    open = '\0';
+                    if(!sb.isEmpty()) {
                         arguments.add(sb.toString());
                         sb.setLength(0);
-                        open = ch;
                     }
-                } else if(open == ch){
-                    //this line handles consecutive same quotes while closing
-                    if(i < l-1 && ch == input.charAt(i+1)){
-                        i++;
-                    }
-                    else {
+
+                }
+            }
+            else if(open == '\0') {
+                //checking if no quotes
+                //checking whitespace
+                if(ch == ' '){
+
+                    if(!sb.isEmpty()){
                         arguments.add(sb.toString());
                         sb.setLength(0);
-                        open = '\0';
+                    }
+
+                    if(!arguments.isEmpty() && !arguments.getLast().equals(" ")){
+                        arguments.add(" ");
+                    }
+                }
+                else if (ch == '\\') { //checking for escape sequence
+                    sb.append(input.charAt(i+1));
+                    i++;
+                }
+                else if(ch == '\"' || ch == '\''){
+
+                    //since opening quotes, hence next_ch definitely exists
+                    next_ch = input.charAt(i+1);
+                    if(ch == next_ch){
+                        i++;
+                    } else {
+                        open = ch; //setting opening quotes
+                        if (!sb.isEmpty()) {
+                            arguments.add(sb.toString());
+                            sb.setLength(0);
+                        }
+                    }
+                }
+                else {
+                    sb.append(ch);
+                }
+            }
+            else if(open == '\"'){ //double quotes open
+                if(ch == '\\'){
+
+                    next_ch = input.charAt(i+1); //cant be last char, since quotes are open
+
+                    if(next_ch == '\"' || next_ch == '\\'){
+                        sb.append(next_ch);
+                        i++;
+                    } else {
+                        sb.append(ch);
                     }
                 } else {
                     sb.append(ch);
                 }
             }
-            else if (open == '\0') {
-                if(Character.isWhitespace(ch) && !sb.isEmpty()) {
-                    arguments.add(sb.toString());
-                    sb.setLength(0);
-                }
-                else if(ch == '\\' && i < l-1){
-                    sb.append(input.charAt(i+1));
-                    i++;
-                } else {
-                    sb.append(ch);
-                }
-            } else {
+            else {
+                //single quotes accept everything literally
                 sb.append(ch);
             }
         }
@@ -178,27 +204,20 @@ public class Main {
         if(!sb.isEmpty()){
             arguments.add(sb.toString());
         }
-
         return arguments;
     }
 
-    public static List<String> spaceHandler(List<String> arguments){
+    public static void spaceRemover(List<String> arguments){
 
+        //remove spaces from arguments list
         String s;
         for(int i = 0; i < arguments.size(); i++){
             s = arguments.get(i);
-            if(s.isBlank()){
+            if(s.equals(" ")){
                 arguments.remove(i);
                 i--;
-            } else {
-                arguments.set(i, s.trim());
             }
         }
-        return arguments;
     }
 
-    public static String[] parser(String input){
-
-        return spaceHandler(splitter(input)).toArray(new String[0]);
-    }
 }
