@@ -1,107 +1,79 @@
+/*
+
+input is always in two parts, command and arguments[optional], separated by a space
+
+do I store each step in a queue-like (or stack-like?) structure
+ do I need to write a processor separately
+
+argument shouldn't contain the starting command. why??
+
+need to convert argument to real path, unless it is already a real path
+
+clean up main and split code properly
+
+*/
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
 public class Main {
-    static void main() {
-        Scanner sc = new Scanner(System.in);
-        String input, command, allPath, newPath, homePath;
-        List<String> arguments;
-        allPath = System.getenv("PATH");
-        homePath = System.getenv("HOME");
-        String[] dirs = allPath.split(":");
-        List<Path> envPaths = new ArrayList<>();
-        Path pathObj, filePath, dirPath = null,currPath, tempPath;
-        for (String dir : dirs) {
+
+    private static final List<Path> pathDirs = new ArrayList<>();
+    private static boolean running = true;
+
+    private static void stopShell(){
+        running = false;
+    }
+
+    private static String getHomePath(){
+        return System.getenv("HOME");
+    }
+
+    private static void setPathDirs(){
+        Path pathObj;
+        for(String dir : System.getenv("PATH").split(":")){
             pathObj = Paths.get(dir);
-            if (Files.exists(pathObj)) {
-                envPaths.add(pathObj);
+            if(Files.exists(pathObj)){
+                pathDirs.add(pathObj);
             }
         }
+    }
 
-        Set<String> builtin = new HashSet<>();
-        builtin.add("echo");
-        builtin.add("exit");
-        builtin.add("type");
-        builtin.add("pwd");
-        builtin.add("cd");
-        while (true) {
+    public static void main() {
+        Scanner sc = new Scanner(System.in);
+        String input;
+        StringBuilder output = new StringBuilder();
+        List<String> tokens;
+        setPathDirs();
+
+        while (running) {
             System.out.print("$ ");
             input = sc.nextLine();
-            arguments = tokenizer(input);
-            if(arguments.getFirst().equals("type")){
-                command = arguments.get(2);
-                if(builtin.contains(command)){
-                    System.out.println(command +" is a shell builtin");
-                } else {
-                    filePath = findExec(envPaths, command);
-                    if(filePath == null){
-                        System.out.println(command+": not found");
-                    } else {
-                        System.out.println(command+" is "+filePath);
-                    }
-                }
+            tokens = tokenizer(input);
+            output.append(responseBuilder(tokens));
+            if(!output.isEmpty()) {
+                System.out.println(output);
             }
-            else if(arguments.getFirst().equals("echo")){
-
-                for (int j = 2; j < arguments.size(); j++) {
-                    String arg = arguments.get(j);
-                    System.out.print(arg);
-                }
-
-                System.out.println();
-            }
-            else if (arguments.getFirst().equals("pwd")) {
-                System.out.println(System.getProperty("user.dir"));
-            }
-            else if(arguments.getFirst().equals("cd")){
-                currPath = Paths.get(System.getProperty("user.dir"));
-                newPath = arguments.get(2);
-
-                if(newPath.charAt(0) == '.'){
-                    tempPath = currPath.resolve(newPath);
-                } else if(newPath.charAt(0) == '~'){
-                    tempPath = Paths.get(homePath);
-                } else {
-                    tempPath = Paths.get(newPath);
-                }
-
-                try {
-                    dirPath = tempPath.toRealPath();
-                } catch (Exception e) {
-
-                    System.out.println("cd: "+tempPath+": No such file or directory");
-                }
-
-                if (dirPath != null) {
-                    System.setProperty("user.dir",dirPath.toString());
-                }
-            }
-            else if(arguments.getFirst().equals("exit")){
-                break;
-            }
-            else {
-                spaceRemover(arguments);
-                filePath = findExec(envPaths, arguments.getFirst());
-                if(filePath == null){
-                    System.out.println(input+": command not found");
-                } else {
-                    runExe(arguments.toArray(new String[0]));
-                }
-            }
+            output.setLength(0);
         }
-        sc.close();
+
+        if(!output.isEmpty()){
+            System.out.println(output);
+        }
     }
 
     // function to find executable by file name. Returns null if executable version of the file doesn't exist.
-    public static Path findExec(List<Path> envPaths, String fileName){
+
+    public static Path findExec(List<Path> pathDirs, String fileName){
         Path filePath;
-        for(Path p : envPaths){
+        for(Path p : pathDirs){
             filePath = p.resolve(fileName);
             if(Files.exists(filePath) && Files.isExecutable(filePath)){
                 return filePath;
@@ -111,14 +83,22 @@ public class Main {
         return null;
     }
 
-    public static void runExe(String[] arguments) {
+    public static void runExe(String[] arguments, StringBuilder sb) {
         try {
-            //ProcessBuilder runs in a different process, and is non-blocking. JVM main process doesn't wait for it and keeps. Hence, we have to "wait for" this child process to end.
-            Process p = new ProcessBuilder(arguments).inheritIO().start();
-            p.waitFor();
-        } catch (Exception e ) {
-            e.printStackTrace();
+            Process p = new ProcessBuilder(arguments).start();
 
+            try (BufferedReader br =
+                         new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    sb.append(line);
+                }
+            }
+
+
+            p.waitFor();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -148,13 +128,8 @@ public class Main {
                 //checking if no quotes
                 //checking whitespace
                 if(ch == ' '){
-
-                    if(!sb.isEmpty()){
-                        arguments.add(sb.toString());
-                        sb.setLength(0);
-                    }
-
-                    if(!arguments.isEmpty() && !arguments.getLast().equals(" ")){
+                    addBufToTokens(arguments,sb);
+                    if(!arguments.isEmpty() && !arguments.getLast().equals(" ") && !arguments.getLast().equals(">")){
                         arguments.add(" ");
                     }
                 }
@@ -170,11 +145,15 @@ public class Main {
                         i++;
                     } else {
                         open = ch; //setting opening quotes
-                        if (!sb.isEmpty()) {
-                            arguments.add(sb.toString());
-                            sb.setLength(0);
-                        }
+                        addBufToTokens(arguments,sb);
                     }
+                }
+                else if(ch == '>'){
+                    addBufToTokens(arguments,sb);
+                    sb.append(ch);
+                    addBufToTokens(arguments,sb);
+                } else if(ch == '1' && i < l-1 && input.charAt(i+1) == '>'){
+                    i++;
                 }
                 else {
                     sb.append(ch);
@@ -191,7 +170,8 @@ public class Main {
                     } else {
                         sb.append(ch);
                     }
-                } else {
+                }
+                else {
                     sb.append(ch);
                 }
             }
@@ -201,9 +181,8 @@ public class Main {
             }
         }
 
-        if(!sb.isEmpty()){
-            arguments.add(sb.toString());
-        }
+        //if something remains in buffer
+        addBufToTokens(arguments,sb);
         return arguments;
     }
 
@@ -220,4 +199,168 @@ public class Main {
         }
     }
 
+    public static boolean isBuiltin(String command){
+
+        Set<String> builtin = Set.of("echo","exit","type","pwd","cd");
+        return builtin.contains(command);
+    }
+
+    public static String runBuiltin(String command, List<String> arguments){
+
+//        System.out.println("first time : "+command);
+        Path currPath,dirPath = null;
+        StringBuilder res = new StringBuilder();
+        String newPathString;
+        //type command
+        switch (command) {
+            case "type" -> {
+
+                for(String arg : arguments) {
+                    if (isBuiltin(arg)) {
+                        res.append(arg).append(" is a shell builtin");
+                    } else {
+                        currPath = findExec(getValidDirs(), arg);
+                        if (currPath == null) {
+                            res.append(arg).append(": not found");
+                        } else {
+                            res.append(arg).append(" is ").append(currPath);
+                        }
+                    }
+                }
+            }
+            //echo command
+            case "echo" -> res = new StringBuilder(String.join("", arguments));
+
+            //pwd command
+            case "pwd" -> res = new StringBuilder(getCurrDir());
+
+            //cd command
+            case "cd" -> {
+                currPath = Paths.get(getCurrDir());
+                newPathString = arguments.getFirst();
+
+                if (newPathString.charAt(0) == '.') {
+                    currPath = currPath.resolve(newPathString);
+                } else if (newPathString.charAt(0) == '~') {
+                    currPath = Paths.get(System.getenv("HOME"));
+                } else {
+                    currPath = Paths.get(newPathString);
+                }
+
+                try {
+                    dirPath = currPath.toRealPath();
+                } catch (Exception e) {
+
+                    System.out.println("cd: " + currPath + ": No such file or directory");
+                }
+
+                if (dirPath != null) {
+                    System.setProperty("user.dir", dirPath.toString());
+                }
+            }
+            //exit command
+            case "exit" -> stopShell();
+        }
+
+        return res.toString();
+    }
+
+    // function to return all valid Paths that exist within the PATH variable
+    public static List<Path> getValidDirs (){
+
+        String allPaths = System.getenv("PATH");
+        String[] dirs = allPaths.split(":");
+        Path pathObj;
+        List<Path> envPaths = new ArrayList<>();
+        for (String dir : dirs) {
+            pathObj = Paths.get(dir);
+            if (Files.exists(pathObj)) {
+                envPaths.add(pathObj);
+            }
+        }
+        return envPaths;
+    }
+
+    //adds buffer to args and reset it
+    public static void addBufToTokens(List<String> arguments,StringBuilder sb){
+        if(!sb.isEmpty()) {
+            arguments.add(sb.toString());
+            sb.setLength(0);
+        }
+    }
+
+    public static StringBuilder responseBuilder(List<String> tokens){
+
+        StringBuilder response = new StringBuilder();
+
+        String token, nextToken;
+        int nextRedirection;
+        List<String> currInput;
+        Path filePath;
+        for(int i = 0;i < tokens.size(); i++){
+            token = tokens.get(i);
+            if(token.equals(" ")){
+                continue;
+            }
+
+            nextRedirection = getNextRedirection(tokens,i);
+            //run builtin
+            if(isBuiltin(token)){
+
+                if(tokens.size() > 2) {
+                    response.append(runBuiltin(token, tokens.subList(i + 2, nextRedirection)));
+                } else {
+                    response.append(runBuiltin(token,new ArrayList<>()));
+                }
+            }
+            else if(token.equals(">")) {
+                nextToken = tokens.get(i+1);
+                if(nextToken.contains("/")){
+                    // this is already a path
+                    filePath = Paths.get(nextToken);
+                } else {
+                    filePath = Paths.get(getHomePath()).resolve(nextToken);
+                }
+
+                filePath = filePath.toAbsolutePath();
+                try {
+                    Files.createFile(filePath);
+                    Files.writeString(filePath,response);
+                    response.setLength(0);
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+            else {
+                spaceRemover(tokens.subList(i, nextRedirection));
+                nextRedirection = getNextRedirection(tokens,i);
+                currInput = tokens.subList(i, nextRedirection);
+                filePath = findExec(pathDirs, token);
+                if(filePath == null){
+                    response.append(token).append(": command not found");
+                } else {
+                    runExe(currInput.toArray(new String[0]),response);
+                }
+            }
+
+            i+=nextRedirection;
+        }
+
+        return response;
+    }
+
+    public static int getNextRedirection(List<String> tokens, int i){
+
+        int j = i+1;
+        while (j < tokens.size() && !tokens.get(j).equals(">")){
+            j++;
+        }
+
+        return j;
+    }
+
+    public static String getCurrDir(){
+
+        return System.getenv("user.dir");
+    }
 }
