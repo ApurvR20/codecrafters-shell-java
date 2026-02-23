@@ -15,7 +15,7 @@ public class Builtins {
         return builtin.contains(command);
     }
 
-    public static String runBuiltin(String command, List<String> arguments){
+    public String runBuiltin(String command, List<String> arguments){
 
         ExeHandler exeHandler = new ExeHandler();
         PathUtils pathUtils = new PathUtils();

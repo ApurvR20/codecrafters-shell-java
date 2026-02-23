@@ -5,14 +5,15 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import shell.CommandResult;
 import shell.ExeHandler;
-import static shell.Builtins.isBuiltin;
-import static shell.Builtins.runBuiltin;
+import shell.Builtins.isBuiltin;
+import shell.Builtins.runBuiltin;
 import shell.PathUtils;
 
 public final class ResponseBuilder {
 
-    public static String handle(String input) {
+    public static CommandResult handle(String input) {
         StringBuilder response = new StringBuilder();
         Tokenizer obj = new Tokenizer();
         PathUtils pathObj = new PathUtils();
