@@ -1,27 +1,30 @@
-package shell;
+package shell.core;
 
+import shell.CommandResult;
+import shell.ExeHandler;
+import shell.PathUtils;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
-
 import static shell.PathUtils.getCurrDir;
 
 public class Builtins {
-//    private
-    public static boolean isBuiltin(String command){
+    public boolean isBuiltin(String command){
 
         Set<String> builtin = Set.of("echo","exit","type","pwd","cd");
         return builtin.contains(command);
     }
 
-    public String runBuiltin(String command, List<String> arguments){
+    public CommandResult runBuiltin(String command, List<String> arguments){
 
         ExeHandler exeHandler = new ExeHandler();
         PathUtils pathUtils = new PathUtils();
         Path currPath,dirPath = null;
         StringBuilder res = new StringBuilder();
         String newPathString;
+        boolean running = true;
+
         //type command
         switch (command) {
             case "type" -> {
@@ -70,9 +73,12 @@ public class Builtins {
                 }
             }
             //exit command
-            case "exit" -> this.stopShell();
+            case "exit" -> {
+                res.setLength(0);
+                running = false;
+            }
         }
 
-        return res.toString();
+        return new CommandResult(running, res.toString());
     }
 }

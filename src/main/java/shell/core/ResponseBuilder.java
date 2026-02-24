@@ -6,31 +6,40 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import shell.CommandResult;
-import shell.ExeHandler;
-import shell.Builtins.isBuiltin;
-import shell.Builtins.runBuiltin;
 import shell.PathUtils;
 
 public final class ResponseBuilder {
 
-    public static CommandResult handle(String input) {
+    public CommandResult handle(String input) {
+
+        CommandResult resObj = new CommandResult(), tempObj;
         StringBuilder response = new StringBuilder();
         Tokenizer obj = new Tokenizer();
         PathUtils pathObj = new PathUtils();
         List<String> tokens = obj.tokenizer(input);
+        Builtins builtinObj = new Builtins();
         String token, nextToken;
         int nextRedirection;
         List<String> currInput;
         Path filePath, parentFilePath;
+
         for(int i = 0;i < tokens.size(); i++){
             token = tokens.get(i);
             nextRedirection = getNextRedirection(tokens,i);
 
-            if(isBuiltin(token)){
+            //correct for all cases where an object is t be passed instead of a single string, including responsebuilder
+            if(builtinObj.isBuiltin(token)){
                 if(tokens.size() > 1) {
-                    response.append(runBuiltin(token, tokens.subList(i + 1,nextRedirection)));
+                    tempObj = builtinObj.runBuiltin(token, tokens.subList(i + 1,nextRedirection));
                 } else {
-                    response.append(runBuiltin(token,new ArrayList<>()));
+                    tempObj = builtinObj.runBuiltin(token,new ArrayList<>());
+                }
+
+                if(tempObj.getRunning()){
+                    resObj.appendOutput(tempObj.getOutput());
+                } else {
+                    resObj.setRunning(false);
+                    return resObj;
                 }
             }
             else if(token.equals(">")) {
@@ -68,6 +77,17 @@ public final class ResponseBuilder {
             i+=nextRedirection-1;
         }
         return response;
+    }
+
+    private int getNextRedirection(List<String> tokens, int i){
+
+        for(;i < tokens.size(); i++){
+            if(tokens.get(i).equals(">")){
+                break;
+            }
+        }
+
+        return i;
     }
 
 

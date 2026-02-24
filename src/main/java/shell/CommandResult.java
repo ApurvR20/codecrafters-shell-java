@@ -1,10 +1,14 @@
 package shell;
 
 public class CommandResult {
-    private final String output;
-    private final boolean running;
+    private String output;
+    private boolean running;
 
-    public CommandResult(String output, boolean running){
+    public CommandResult(){
+        this.output = "";
+        this.running = true;
+    }
+    public CommandResult(boolean running, String output){
         this.output = output;
         this.running = running;
     }
@@ -16,4 +20,14 @@ public class CommandResult {
     public boolean getRunning(){
         return running;
     }
+
+    public void setRunning(boolean newRunning){
+        running = newRunning;
+    }
+
+    public void appendOutput(String partialOutput){
+        output += partialOutput;
+    }
+
+
 }

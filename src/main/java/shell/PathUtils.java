@@ -15,11 +15,11 @@ public class PathUtils {
 
     private static final List<Path> pathDirs = new ArrayList<>();
 
-    static String getCurrDir() {
+    public static String getCurrDir() {
         return System.getProperty("user.dir");
     }
 
-    static List<Path> getPathDirs(){
+    public static List<Path> getPathDirs(){
         return pathDirs;
     }
 
