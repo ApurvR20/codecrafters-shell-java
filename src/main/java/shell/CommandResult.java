@@ -1,20 +1,30 @@
 package shell;
 
 public class CommandResult {
-    private String output;
+    private StringBuilder output = new StringBuilder();
     private boolean running;
 
     public CommandResult(){
-        this.output = "";
+        this.output.setLength(0);
         this.running = true;
     }
-    public CommandResult(boolean running, String output){
-        this.output = output;
+    public CommandResult(boolean running, StringBuilder output){
+        this.output.setLength(0);
+        this.output.append(output);
         this.running = running;
     }
 
-    public String getOutput(){
+    public StringBuilder getOutput(){
         return output;
+    }
+
+    public void resetOutput(){
+        output.setLength(0);
+    }
+
+    public void setOutput(StringBuilder newOutput){
+        resetOutput();
+        output.append(newOutput);
     }
 
     public boolean getRunning(){
@@ -26,7 +36,10 @@ public class CommandResult {
     }
 
     public void appendOutput(String partialOutput){
-        output += partialOutput;
+        output.append(partialOutput);
+    }
+    public void appendOutput(StringBuilder partialOutput){
+        output.append(partialOutput);
     }
 
 

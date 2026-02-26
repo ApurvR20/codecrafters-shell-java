@@ -20,7 +20,7 @@ public class ExeHandler {
         return null;
     }
 
-    public void runExe(String[] arguments, StringBuilder out) {
+    public void runExe(String[] arguments, StringBuilder out, Path cwd) {
         try {
             Process p = new ProcessBuilder(arguments).start();
 

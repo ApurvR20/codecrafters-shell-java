@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class Tokenizer {
-    public static List<String> tokenizer(String input){
+    public List<String> tokenizer(String input){
         List<String> arguments = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
         char open = '\0',ch, next_ch;

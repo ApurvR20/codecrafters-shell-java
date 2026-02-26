@@ -6,18 +6,22 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import shell.CommandResult;
-import shell.PathUtils;
+import shell.ExeHandler;
 
 public final class ResponseBuilder {
+
+    ShellContext shellContext;
+    public ResponseBuilder(ShellContext shellContext){
+        this.shellContext = shellContext;
+    }
 
     public CommandResult handle(String input) {
 
         CommandResult resObj = new CommandResult(), tempObj;
-        StringBuilder response = new StringBuilder();
+        ExeHandler exeHandlerObj = new ExeHandler();
         Tokenizer obj = new Tokenizer();
-        PathUtils pathObj = new PathUtils();
         List<String> tokens = obj.tokenizer(input);
-        Builtins builtinObj = new Builtins();
+        Builtins builtinObj = new Builtins(shellContext);
         String token, nextToken;
         int nextRedirection;
         List<String> currInput;
@@ -27,7 +31,8 @@ public final class ResponseBuilder {
             token = tokens.get(i);
             nextRedirection = getNextRedirection(tokens,i);
 
-            //correct for all cases where an object is t be passed instead of a single string, including responsebuilder
+            //correct for all cases where an object is t be passed instead of a single string, including response
+            // builder
             if(builtinObj.isBuiltin(token)){
                 if(tokens.size() > 1) {
                     tempObj = builtinObj.runBuiltin(token, tokens.subList(i + 1,nextRedirection));
@@ -39,7 +44,7 @@ public final class ResponseBuilder {
                     resObj.appendOutput(tempObj.getOutput());
                 } else {
                     resObj.setRunning(false);
-                    return resObj;
+                    break;
                 }
             }
             else if(token.equals(">")) {
@@ -49,7 +54,7 @@ public final class ResponseBuilder {
                     // this is already a path
                     filePath = Paths.get(nextToken);
                 } else {
-                    filePath = Paths.get(PathUtils.getHomePath()).resolve(nextToken);
+                    filePath = shellContext.getHome().resolve(nextToken);
                 }
 
                 filePath = filePath.toAbsolutePath();
@@ -58,25 +63,25 @@ public final class ResponseBuilder {
                     if(parentFilePath != null){
                         Files.createDirectories(parentFilePath);
                     }
-                    Files.writeString(filePath,response);
-                    response.setLength(0);
+                    Files.writeString(filePath,resObj.getOutput());
+                    resObj.resetOutput();
                 } catch (Exception e){
                     e.printStackTrace();
                 }
             }
             else {
                 currInput = tokens.subList(i, nextRedirection);
-                filePath = findExec(pathDirs, token);
+                filePath = exeHandlerObj.findExec(shellContext.getPathDirs(), token);
                 if(filePath == null){
-                    response.append(token).append(": command not found");
+                    resObj.appendOutput(token+": command not found");
                 } else {
-                    runExe(currInput.toArray(new String[0]),response);
+                    exeHandlerObj.runExe(currInput.toArray(new String[0]),resObj.getOutput(), shellContext.getCWD());
                 }
             }
 
             i+=nextRedirection-1;
         }
-        return response;
+        return resObj;
     }
 
     private int getNextRedirection(List<String> tokens, int i){

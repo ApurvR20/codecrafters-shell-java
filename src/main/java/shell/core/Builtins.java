@@ -2,14 +2,19 @@ package shell.core;
 
 import shell.CommandResult;
 import shell.ExeHandler;
-import shell.PathUtils;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
-import static shell.PathUtils.getCurrDir;
 
 public class Builtins {
+
+    ShellContext shellContext;
+
+    public Builtins(ShellContext shellContext){
+        this.shellContext = shellContext;
+    }
+
     public boolean isBuiltin(String command){
 
         Set<String> builtin = Set.of("echo","exit","type","pwd","cd");
@@ -19,7 +24,6 @@ public class Builtins {
     public CommandResult runBuiltin(String command, List<String> arguments){
 
         ExeHandler exeHandler = new ExeHandler();
-        PathUtils pathUtils = new PathUtils();
         Path currPath,dirPath = null;
         StringBuilder res = new StringBuilder();
         String newPathString;
@@ -33,7 +37,7 @@ public class Builtins {
                     if (isBuiltin(arg)) {
                         res.append(arg).append(" is a shell builtin");
                     } else {
-                        currPath = exeHandler.findExec(pathUtils.getPathDirs(), arg);
+                        currPath = exeHandler.findExec(shellContext.getPathDirs(), arg);
                         if (currPath == null) {
                             res.append(arg).append(": not found");
                         } else {
@@ -46,17 +50,17 @@ public class Builtins {
             case "echo" -> res = new StringBuilder(String.join("", arguments));
 
             //pwd command
-            case "pwd" -> res = new StringBuilder(getCurrDir());
+            case "pwd" -> res = new StringBuilder(shellContext.getCWD().toString());
 
             //cd command
             case "cd" -> {
-                currPath = Paths.get(getCurrDir());
+                currPath = shellContext.getCWD();
                 newPathString = arguments.getFirst();
 
                 if (newPathString.charAt(0) == '.') {
                     currPath = currPath.resolve(newPathString);
                 } else if (newPathString.charAt(0) == '~') {
-                    currPath = Paths.get(System.getenv("HOME"));
+                    currPath = shellContext.getHome();
                 } else {
                     currPath = Paths.get(newPathString);
                 }
@@ -69,7 +73,7 @@ public class Builtins {
                 }
 
                 if (dirPath != null) {
-                    System.setProperty("user.dir", dirPath.toString());
+                    shellContext.setCWD(dirPath);
                 }
             }
             //exit command
@@ -79,6 +83,6 @@ public class Builtins {
             }
         }
 
-        return new CommandResult(running, res.toString());
+        return new CommandResult(running, res);
     }
 }

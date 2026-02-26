@@ -2,3 +2,8 @@ each time builtin is called, a new output object is returned
 should that be allowed or only one 'global' obj updated?
 if allowed, how do i receive it? do i create a new object every time rb calls builtin?
 is that even syntactically correct? would obj1 = obj2 copy the references, or something else? how should this be handled? how does it obj1 = obj2 even work?
+
+same pathDir and homeDir need to be used across rb and builtins
+might have to check resObj output since response was StringBuilder and resobj is string
+
+fix exehandler and echo
