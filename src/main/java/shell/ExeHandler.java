@@ -22,7 +22,9 @@ public class ExeHandler {
 
     public void runExe(String[] arguments, StringBuilder out, Path cwd) {
         try {
-            Process p = new ProcessBuilder(arguments).start();
+            ProcessBuilder pb = new ProcessBuilder(arguments);
+            pb.directory(cwd.toFile());
+            Process p = pb.start();
 
             Thread t1 = new Thread(() -> {
                 try (BufferedReader br =
@@ -33,6 +35,7 @@ public class ExeHandler {
                     }
                 } catch (Exception ignored) {}
             });
+
             Thread t2 = new Thread(() -> {
                 try (BufferedReader br =
                              new BufferedReader(new InputStreamReader(p.getErrorStream()))) {

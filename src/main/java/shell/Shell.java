@@ -17,7 +17,7 @@ public class Shell {
             outputObj = rbObj.handle(input);
             if(!outputObj.getRunning()){
                 running = outputObj.getRunning();
-            } else {
+            } else if(!outputObj.getOutput().isEmpty()) {
                 System.out.println(outputObj.getOutput());
             }
         }

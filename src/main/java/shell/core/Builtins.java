@@ -47,7 +47,7 @@ public class Builtins {
                 }
             }
             //echo command
-            case "echo" -> res = new StringBuilder(String.join("", arguments));
+            case "echo" -> res = new StringBuilder(String.join(" ", arguments).trim());
 
             //pwd command
             case "pwd" -> res = new StringBuilder(shellContext.getCWD().toString());
@@ -68,7 +68,6 @@ public class Builtins {
                 try {
                     dirPath = currPath.toRealPath();
                 } catch (Exception e) {
-
                     System.out.println("cd: " + currPath + ": No such file or directory");
                 }
 

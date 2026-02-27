@@ -15,7 +15,7 @@ public class ShellContext {
 
     public ShellContext(){
         setCWD(Paths.get(System.getProperty("user.dir")));
-        setHome(Paths.get(System.getProperty("user.home")));
+        setHome(Paths.get(System.getenv("HOME")));
         setPathDirs(System.getenv("PATH"));
     }
 
